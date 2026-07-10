@@ -1,15 +1,33 @@
-const client = window.supabase.createClient(
-  "https://mkrnksthkovbolgvggvh.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1rcm5rc3Roa292Ym9sZ3ZnZ3ZoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI1MzE5MDYsImV4cCI6MjA5ODEwNzkwNn0.oSz-xPYOV0Fwzottm62pnqBgySAH6ozFavZLyUua_Is",
-  {
-    auth: {
-      storage: window.localStorage,
-      persistSession: true,
-      detectSessionInUrl: true,  // ← catches session from redirect
-      autoRefreshToken: true
-    }
+// Wait for Supabase to be available
+let client = null;
+
+function initSupabase() {
+  if (!window.supabase) {
+    console.error('❌ Supabase library not loaded');
+    return false;
   }
-);
+  client = window.supabase.createClient(
+    "https://mkrnksthkovbolgvggvh.supabase.co",
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1rcm5rc3Roa292Ym9sZ3ZnZ3ZoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI1MzE5MDYsImV4cCI6MjA5ODEwNzkwNn0.oSz-xPYOV0Fwzottm62pnqBgySAH6ozFavZLyUua_Is",
+    {
+      auth: {
+        storage: window.localStorage,
+        persistSession: true,
+        detectSessionInUrl: true,
+        autoRefreshToken: true
+      }
+    }
+  );
+  console.log('✅ Supabase initialized');
+  return true;
+}
+
+// Initialize when DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initSupabase);
+} else {
+  initSupabase();
+}
 
 function showForgot() {
   document.getElementById("login_form").style.display = "none";
@@ -22,6 +40,11 @@ function showLogin() {
 }
 
 window.login = async function() {
+  if (!client) {
+    alert("❌ System initializing. Please wait a moment and try again.");
+    return;
+  }
+
   const msg = document.getElementById("msg");
   msg.innerText = "Signing in...";
   msg.className = "msg info";
@@ -43,10 +66,20 @@ window.login = async function() {
     return;
   }
 
-  window.location.href = "https://portal.membership.rundispatcher.com/portal-dashboard";
+  // Check if there's a redirect parameter (from customer page login redirect)
+  const urlParams = new URLSearchParams(window.location.search);
+  const redirectUrl = urlParams.get('redirect') || "https://portal.membership.rundispatcher.com/portal-dashboard";
+  
+  console.log('Login successful, redirecting to:', redirectUrl);
+  window.location.href = redirectUrl;
 }
 
 window.sendReset = async function() {
+  if (!client) {
+    alert("❌ System initializing. Please wait a moment and try again.");
+    return;
+  }
+
   const msg = document.getElementById("reset_msg");
   const email = document.getElementById("reset_email").value.trim();
 

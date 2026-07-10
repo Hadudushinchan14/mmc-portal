@@ -1,15 +1,38 @@
-const client = window.supabase.createClient(
-  "https://mkrnksthkovbolgvggvh.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1rcm5rc3Roa292Ym9sZ3ZnZ3ZoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI1MzE5MDYsImV4cCI6MjA5ODEwNzkwNn0.oSz-xPYOV0Fwzottm62pnqBgySAH6ozFavZLyUua_Is",
-  {
-    auth: {
-      storage: window.localStorage,
-      persistSession: true,
-      detectSessionInUrl: true,
-      autoRefreshToken: true
-    }
+// Initialize Supabase client only when library is ready
+let client = null;
+
+function initializeSupabase() {
+  if (window.supabase) {
+    client = window.supabase.createClient(
+      "https://mkrnksthkovbolgvggvh.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1rcm5rc3Roa292Ym9sZ3ZnZ3ZoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI1MzE5MDYsImV4cCI6MjA5ODEwNzkwNn0.oSz-xPYOV0Fwzottm62pnqBgySAH6ozFavZLyUua_Is",
+      {
+        auth: {
+          storage: window.localStorage,
+          persistSession: true,
+          detectSessionInUrl: true,
+          autoRefreshToken: true
+        }
+      }
+    );
+    console.log('✅ Supabase initialized');
+    return true;
+  } else {
+    console.error('❌ Supabase library not loaded yet');
+    return false;
   }
-);
+}
+
+// Try to init immediately in case script loads after Supabase
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initializeSupabase);
+} else {
+  // Page already loaded
+  if (!initializeSupabase()) {
+    // If still not available, wait a bit
+    setTimeout(initializeSupabase, 500);
+  }
+}
 
 // allCustomers = the CURRENT PAGE only (max 30 rows). Search filters this.
 // Counts are fetched separately from the full table and never depend on pagination.
@@ -140,10 +163,24 @@ async function fetchPage(userId) {
 }
 
 async function loadCustomers({ refreshCounts = false } = {}) {
+  // Ensure client is initialized
+  if (!client) {
+    console.error('Client not initialized, retrying...');
+    await new Promise(resolve => setTimeout(resolve, 500));
+    if (!client) {
+      console.error('Failed to initialize database connection');
+      // Use absolute URL to prevent loop
+      window.location.href = "https://mmc.rundispatcher.com/";
+      return;
+    }
+  }
+
   const { data: { user } } = await client.auth.getUser();
 
   if (!user) {
-   window.location = "/";
+    console.warn('No user found, redirecting to login');
+    // Use absolute URL and prevent redirect loop
+    window.location.href = "https://mmc.rundispatcher.com/?redirect=/customer";
     return;
   }
 
@@ -520,10 +557,31 @@ function ensureTextModal() {
 }
 
 // ---------- init ----------
-window.addEventListener("load", () => {
+window.addEventListener("load", async () => {
+  console.log('Page loaded, waiting for Supabase client...');
+  
+  // Wait for client to be initialized
+  let retries = 0;
+  while (!client && retries < 20) {
+    await new Promise(resolve => setTimeout(resolve, 100));
+    retries++;
+  }
+
+  if (!client) {
+    console.error('Failed to initialize Supabase client after 2 seconds');
+    alert('Failed to connect to database. Please refresh the page.');
+    return;
+  }
+
+  console.log('✅ Supabase client ready, loading customers...');
+
   // Counts only need to be fetched once — they reflect the full table
   // and don't change as the user pages through or switches filters.
-  loadCustomers({ refreshCounts: true });
+  try {
+    await loadCustomers({ refreshCounts: true });
+  } catch (err) {
+    console.error('Error loading customers:', err);
+  }
 
   // Pre-create both modals (hidden) so they're ready the first time
   // someone clicks the Text button.
@@ -572,6 +630,3 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
-
-
-
