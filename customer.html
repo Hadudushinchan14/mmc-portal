@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Customers</title>
+
+<link rel="stylesheet" href="style.css">
+
+</head>
+
+<body>
+
+<div class="customers-page">
+
+
+<div class="brand-banner">
+
+<a href="https://portal.membership.rundispatcher.com/portal-dashboard" class="banner-click">
+
+<section class="mmc-banner">
+
+  <div class="mmc-banner-inner">
+
+    <h1 class="mmc-title">
+      My Membership
+    </h1>
+
+    <div class="mmc-club">
+      CLUB
+    </div>
+
+    <div class="mmc-bottom-row">
+
+    <div class="mmc-premium">
+        ✨ PREMIUM RECURRING REVENUE PROGRAM
+      </div>
+
+    </div>
+
+  </div>
+</a>
+
+</section>
+
+
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Alex+Brush&family=Cinzel:wght@700;800;900&family=Inter:wght@400;500;600;700;800&display=swap');
+
+
+.mmc-banner{
+  position:relative;
+  overflow:hidden;
+  width:100%;
+  padding:8px 15px 10px;
+  text-align:center;
+
+  background:
+  radial-gradient(circle at center top,
+  rgba(251,191,36,.35) 0%,
+  rgba(251,191,36,.08) 25%,
+  transparent 60%),
+  linear-gradient(
+  180deg,
+  #050816 0%,
+  #0d1117 100%);
+}
+
+.mmc-banner::before{
+  content:'';
+  position:absolute;
+  top:-180px;
+  left:50%;
+  transform:translateX(-50%);
+  width:600px;
+  height:600px;
+  border-radius:50%;
+  background:rgba(251,191,36,.12);
+  filter:blur(130px);
+}
+
+.mmc-banner-inner{
+  position:relative;
+  z-index:2;
+  max-width:1200px;
+  margin:auto;
+}
+
+/* TITLE */
+
+.mmc-title{
+  margin:0;
+
+  font-family:'Alex Brush',cursive;
+
+  font-size:48px;
+  font-weight:400;
+  line-height:.9;
+
+  background:linear-gradient(
+    180deg,
+    #ffffff 0%,
+    #fff8dc 20%,
+    #fde68a 55%,
+    #fbbf24 100%
+  );
+
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+
+  text-shadow:
+  0 0 20px rgba(251,191,36,.35),
+  0 0 50px rgba(251,191,36,.20);
+}
+
+/* CLUB */
+
+.mmc-club{
+  margin-top:-4px;
+
+  font-family:'Cinzel',serif;
+  font-size:34px;
+  font-weight:900;
+
+  letter-spacing:8px;
+  text-transform:uppercase;
+
+  color:#fbbf24;
+
+  text-shadow:
+  0 0 15px rgba(251,191,36,.25);
+}
+
+/* LOGO + PREMIUM ROW */
+
+.mmc-bottom-row{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:16px;
+  margin-top:-5px;
+}
+
+.mmc-logo{
+  display:flex;
+  align-items:center;
+}
+
+.mmc-logo img{
+  width:150px;
+  height:auto;
+
+  filter:
+    drop-shadow(0 0 12px rgba(251,191,36,.4))
+    drop-shadow(0 0 30px rgba(251,191,36,.25));
+
+  animation:logoGlow 4s ease-in-out infinite;
+}
+
+@keyframes logoGlow{
+  0%,100%{
+    transform:scale(1);
+  }
+  50%{
+    transform:scale(1.05);
+  }
+}
+
+/* PREMIUM BADGE */
+
+.mmc-premium{
+  display:inline-flex;
+  align-items:center;
+
+  padding:8px 16px;
+
+  border-radius:999px;
+
+  background:rgba(251,191,36,.10);
+  border:1px solid rgba(251,191,36,.30);
+
+  color:#fbbf24;
+
+  font-family:'Inter',sans-serif;
+  font-size:10px;
+  font-weight:800;
+
+  letter-spacing:2px;
+  text-transform:uppercase;
+}
+
+/* TABLET */
+
+@media(max-width:768px){
+
+  .mmc-title{
+    font-size:56px;
+  }
+
+  .mmc-club{
+    font-size:26px;
+    letter-spacing:5px;
+  }
+
+  .mmc-logo img{
+    width:150px;
+  }
+}
+
+/* MOBILE */
+
+@media(max-width:480px){
+
+  .mmc-banner{
+    padding:2px 10px;
+    
+  }
+
+  .mmc-title{
+    font-size:48px;
+    line-height:1;
+    margin-bottom: 2px;
+    margin-top: 8px;
+  }
+
+  .mmc-club{
+    font-size:24px;
+    letter-spacing:3px;
+    margin-top:0x;
+  }
+
+  .mmc-bottom-row{
+    gap:2px;
+    margin-top:-4px;
+  }
+
+  .mmc-logo img{
+  width:120px;
+}
+
+.mmc-logo{
+  transform:translateY(-20px);
+}
+
+  .mmc-premium{
+    font-size:11px;
+    letter-spacing:1px;
+    padding:6px 12px;
+  }
+
+
+}
+</style>
+
+</div>
+
+
+
+
+
+    <div class="page-header">
+        <h1>Customers</h1>
+        <p>Manage your customers here.</p>
+    </div>
+
+    <div class="stats-grid">
+
+        <div class="stat-card stat-total" id="filter-all">
+            <h2 id="total_customers">0</h2>
+            <p>Total Members</p>
+        </div>
+
+        <div class="stat-card stat-bronze" id="filter-bronze">
+            <h2 id="active_customers">0</h2>
+            <p>Bronze Members</p>
+        </div>
+
+        <div class="stat-card stat-gold" id="filter-gold">
+            <h2 id="pending_customers">0</h2>
+            <p>Gold Members</p>
+        </div>
+
+        <div class="stat-card stat-steel" id="filter-steel">
+            <h2 id="steel_customers">0</h2>
+            <p>Steel Members</p>
+        </div>
+
+    </div>
+
+    <div class="customer-header">
+        <h2>Customer List</h2>
+        <button id="addCustomerBtn">+ Add Customer</button>
+    </div>
+
+    <input
+        id="searchInput"
+        placeholder="Search customers..."
+        style="width:100%;padding:12px 14px;border:1px solid #E5E7EB;border-radius:12px;margin-bottom:16px;"
+    >
+
+    <div id="customer_list">
+        Loading...
+    </div>
+
+    <div style="display:flex;gap:10px;margin-top:20px;">
+        <button id="prevPage" class="view-btn">← Prev</button>
+        <button id="nextPage" class="view-btn">Next →</button>
+    </div>
+
+</div>
+
+
+    <div id="customerModal">
+
+    <div class="modal-box">
+
+        <div class="modal-header">
+            <h2>Add Customer</h2>
+
+            <div id="closeModal" class="modal-close-x">
+                ✕
+            </div>
+        </div>
+
+        <label>Full Name</label>
+        <input id="full_name" type="text" placeholder="Jane Doe">
+
+        <label>Email</label>
+        <input id="customer_email" type="email" placeholder="jane@example.com">
+
+        <label>Phone</label>
+        <input id="customer_phone" type="tel" placeholder="(555) 123-4567">
+
+        <label>Status</label>
+        <select id="customer_status">
+            <option value="BRONZE">Bronze</option>
+            <option value="GOLD">Gold</option>
+            <option value="STEEL">Steel</option>
+        </select>
+
+        <div id="successMsg" class="success-msg">
+            ✅ Customer Added Successfully — Welcome Email Sent!
+        </div>
+
+        <div class="modal-actions">
+            <button id="cancelModal" class="secondary-btn">
+                Cancel
+            </button>
+
+            <button id="saveCustomer" class="primary-btn">
+                Add Customer
+            </button>
+        </div>
+
+    </div>
+
+</div>
+
+
+<style>
+#customerModal{
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(15,15,20,.55);
+    backdrop-filter:blur(3px);
+    justify-content:center;
+    align-items:center;
+    z-index:999999;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+}
+
+#customerModal .modal-box{
+    background:#fff;
+    width:90%;
+    max-width:420px;
+    border-radius:16px;
+    padding:28px 26px;
+    box-shadow:0 20px 60px rgba(0,0,0,.25);
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+}
+
+#customerModal .modal-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+
+#customerModal h2{
+    margin:0;
+    font-size:20px;
+}
+
+#customerModal .modal-close-x{
+    width:30px;
+    height:30px;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    background:#F3F4F6;
+    border-radius:50%;
+    cursor:pointer;
+    font-weight:bold;
+}
+
+#customerModal label{
+    font-size:13px;
+    font-weight:600;
+}
+
+#customerModal input,
+#customerModal select{
+    width:100%;
+    padding:11px;
+    border:1px solid #ddd;
+    border-radius:8px;
+    box-sizing:border-box;
+}
+
+#customerModal .modal-actions{
+    display:flex;
+    justify-content:flex-end;
+    gap:10px;
+    margin-top:8px;
+}
+
+.primary-btn{
+    background:#2563EB;
+    color:#fff;
+    border:none;
+    padding:11px 18px;
+    border-radius:8px;
+    cursor:pointer;
+}
+
+.secondary-btn{
+    background:#eee;
+    border:none;
+    padding:11px 18px;
+    border-radius:8px;
+    cursor:pointer;
+}
+
+.success-msg{
+    display:none;
+    background:#EAF8EF;
+    color:#18864B;
+    padding:10px;
+    border-radius:8px;
+}
+</style>
+
+<script>
+const modal = document.getElementById("customerModal");
+
+const addBtn = document.getElementById("addCustomerBtn");
+const closeBtn = document.getElementById("closeModal");
+const cancelBtn = document.getElementById("cancelModal");
+const saveBtn = document.getElementById("saveCustomer");
+const successMsg = document.getElementById("successMsg");
+
+addBtn.addEventListener("click", async () => {
+
+    const { data: { user } } = await client.auth.getUser();
+  
+  	const { data: profile, error: profileError } = await client
+    .from("profiles")
+    .select("plan")
+    .eq("user_id", user.id)
+    .single();
+
+if (profileError) {
+    alert("Unable to verify your membership.");
+    return;
+}
+
+let customerLimit = 300;
+
+switch ((profile.plan || "").toLowerCase()) {
+    case "standard":
+        customerLimit = 300;
+        break;
+
+    case "professional":
+        customerLimit = 1000;
+        break;
+
+    case "ai pro":
+        customerLimit = Number.MAX_SAFE_INTEGER; // unlimited
+        break;
+
+    default:
+        customerLimit = 300;
+}
+
+    if (!user) {
+        alert("Please log in again.");
+        return;
+    }
+
+    const { count, error: countError } = await client
+        .from("customers")
+        .select("*", { count: "exact", head: true })
+        .eq("partner_id", user.id);
+
+    if (countError) {
+    alert("Unable to verify your customer limit.");
+    	return;
+    }
+
+    if (count >= customerLimit) {
+        alert("You've reached the 300 customer limit on the Standard plan. Upgrade to Professional or AI Pro to add more members.")
+        return;
+    }
+
+    modal.style.display = "flex";
+
+});
+
+function closeModal() {
+    modal.style.display = "none";
+    successMsg.style.display = "none";
+}
+
+closeBtn.addEventListener("click", closeModal);
+cancelBtn.addEventListener("click", closeModal);
+
+saveBtn.addEventListener("click", async () => {
+
+    const { data: { user } } = await client.auth.getUser();
+
+    if (!user) {
+        alert("Please log in again.");
+        return;
+    }
+  
+  	const { count, error: countError } = await client
+    .from("customers")
+    .select("*", { count: "exact", head: true })
+    .eq("partner_id", user.id);
+
+if (countError) {
+    alert("Unable to verify your customer limit.");
+    return;
+}
+
+const { data: profile, error: profileError } = await client
+    .from("profiles")
+    .select("plan")
+    .eq("user_id", user.id)
+    .single();
+
+if (profileError) {
+    alert("Unable to verify your membership.");
+    return;
+}
+
+const isStandard = (profile.plan || "").toLowerCase() === "standard";
+
+if (isStandard && count >= 300) {
+    alert("You've reached the 300 customer limit on the Standard plan. Upgrade to Professional or AI Pro to add more members.");
+    return;
+}
+
+    const fullName = document.getElementById("full_name").value.trim();
+    const email = document.getElementById("customer_email").value.trim();
+    const phone = document.getElementById("customer_phone").value.trim();
+    const status = document.getElementById("customer_status").value;
+
+    if (!fullName) {
+        alert("Full Name is required.");
+        return;
+    }
+
+    saveBtn.disabled = true;
+    saveBtn.textContent = "Adding...";
+
+    try {
+		
+      	// Check customer limit for Standard plan
+const { data: profile } = await client
+    .from("profiles")
+    .select("plan")
+    .eq("user_id", user.id)
+    .single();
+
+if (profile?.plan === "standard") {
+    const { count } = await client
+        .from("customers")
+        .select("*", { count: "exact", head: true })
+        .eq("partner_id", user.id);
+
+    if (count >= 300) {
+        alert("Your Standard plan includes up to 300 members. Upgrade to Professional or AI Pro for unlimited members.");
+        saveBtn.disabled = false;
+        saveBtn.textContent = "Add Customer";
+        return;
+    }
+}	
+      
+        const { data, error } = await client
+            .from("customers")
+            .insert({
+                partner_id: user.id,
+                full_name: fullName,
+                email: email,
+                phone: phone,
+                status: status
+            })
+            .select()
+            .single();
+
+        if (error) throw error;
+
+        const { error: fnError } = await client.functions.invoke(
+            "create-ghl-contact",
+            {
+                body: {
+                    partner_id: user.id,
+                    full_name: fullName,
+                    email: email,
+                    phone: phone,
+                    member_id: data.member_id,
+                    business_name: data.business_name
+                }
+            }
+        );
+
+        if (fnError) {
+            console.error(fnError);
+        }
+
+        successMsg.style.display = "block";
+
+        document.getElementById("full_name").value = "";
+        document.getElementById("customer_email").value = "";
+        document.getElementById("customer_phone").value = "";
+        document.getElementById("customer_status").value = "BRONZE";
+
+        await loadCustomers();
+
+        setTimeout(() => {
+            closeModal();
+        }, 1500);
+
+    } catch (err) {
+
+        console.error(err);
+        alert(err.message || "Unable to add customer.");
+
+    } finally {
+
+        saveBtn.disabled = false;
+        saveBtn.textContent = "Add Customer";
+
+    }
+
+});
+</script>
+
+    <script src="app.js"></script>
+
+<script>
+document.getElementById("mmcBanner").onclick = function() {
+    window.location.href = "https://portal.membership.rundispatcher.com/portal-dashboard";
+};
+</script>
+
+</body>
+</html>
