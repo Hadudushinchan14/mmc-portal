@@ -541,7 +541,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // search — operates on the currently loaded page only, per spec.
+   // search — operates on the currently loaded page only, per spec.
   // Does not touch currentFilter, pagination, or the DB.
   const search = document.getElementById("searchInput");
 
@@ -564,3 +564,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
+
+
+

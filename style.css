@@ -611,4 +611,23 @@
     .text-modal-save-btn{
         width:100%;
     }
+
+  .brand-banner{
+    position:relative;
+}
+
+#mmcBanner {
+    cursor: pointer;
+}
+}
+
+/* Remove blue underline and reset link text colors */
+a {
+    text-decoration: none;
+    color: inherit;
+}
+
+/* Optional: Ensure the hover state doesn't change the color */
+a:hover {
+    text-decoration: none;
 }
