@@ -35,7 +35,7 @@ window.login = async function() {
     return;
   }
 
-  window.location.href = "/index.html";
+  window.location.href = "https://portal.membership.rundispatcher.com/portal-dashboard";
 }
 
 window.sendReset = async function() {
