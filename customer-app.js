@@ -15,7 +15,7 @@ function initializeSupabase() {
         }
       }
     );
-    console.log('✅ Supabase initialized');
+    console.log('✅ Supabase initialized on customer page');
     return true;
   } else {
     console.error('❌ Supabase library not loaded yet');
@@ -170,25 +170,41 @@ async function loadCustomers({ refreshCounts = false } = {}) {
     if (!client) {
       console.error('Failed to initialize database connection');
       // Use absolute URL to prevent loop
-      window.location.href = "https://mmc.rundispatcher.com/";
+      window.location.href = "https://mmc.rundispatcher.com/?redirect=/customer";
       return;
     }
   }
 
-  const { data: { user } } = await client.auth.getUser();
+  // Give localStorage time to be ready and allow session to restore
+  await new Promise(resolve => setTimeout(resolve, 200));
 
-  if (!user) {
-    console.warn('No user found, redirecting to login');
-    // Use absolute URL and prevent redirect loop
+  try {
+    // Try to restore session from localStorage
+    const { data: { session }, error: sessionError } = await client.auth.getSession();
+    
+    console.log('Session check:', { session: !!session, sessionError });
+    console.log('LocalStorage auth key:', localStorage.getItem('sb-mkrnksthkovbolgvggvh-auth-token') ? 'exists' : 'missing');
+
+    const { data: { user } } = await client.auth.getUser();
+
+    console.log('User check:', { user: user?.id || 'not found' });
+
+    if (!user) {
+      console.warn('No user found, redirecting to login with redirect param');
+      // Use absolute URL and prevent redirect loop
+      window.location.href = "https://mmc.rundispatcher.com/?redirect=/customer";
+      return;
+    }
+
+    if (refreshCounts) {
+      await fetchCounts(user.id);
+    }
+
+    await fetchPage(user.id);
+  } catch (err) {
+    console.error('Error in loadCustomers:', err);
     window.location.href = "https://mmc.rundispatcher.com/?redirect=/customer";
-    return;
   }
-
-  if (refreshCounts) {
-    await fetchCounts(user.id);
-  }
-
-  await fetchPage(user.id);
 }
 
 // ---------- filters ----------
@@ -558,39 +574,65 @@ function ensureTextModal() {
 
 // ---------- init ----------
 window.addEventListener("load", async () => {
-  console.log('Page loaded, waiting for Supabase client...');
+  console.log('🚀 Customer page loaded, initializing...');
   
   // Wait for client to be initialized
-  let retries = 0;
-  while (!client && retries < 20) {
+  let clientRetries = 0;
+  while (!client && clientRetries < 20) {
     await new Promise(resolve => setTimeout(resolve, 100));
-    retries++;
+    clientRetries++;
   }
 
   if (!client) {
-    console.error('Failed to initialize Supabase client after 2 seconds');
+    console.error('❌ Failed to initialize Supabase client after 2 seconds');
     alert('Failed to connect to database. Please refresh the page.');
     return;
   }
 
-  console.log('✅ Supabase client ready, loading customers...');
+  console.log('✅ Supabase client ready');
 
-  // Counts only need to be fetched once — they reflect the full table
-  // and don't change as the user pages through or switches filters.
-  try {
-    await loadCustomers({ refreshCounts: true });
-  } catch (err) {
-    console.error('Error loading customers:', err);
-  }
+  // Use auth state listener to wait for session to be restored
+  let authStateReady = false;
+  
+  const { data: { subscription } } = client.auth.onAuthStateChange(async (event, session) => {
+    console.log('🔐 Auth state changed:', { event, sessionExists: !!session });
+    
+    if (!authStateReady) {
+      authStateReady = true;
+      
+      if (session) {
+        console.log('✅ Session restored from localStorage, loading customers...');
+        try {
+          await loadCustomers({ refreshCounts: true });
+        } catch (err) {
+          console.error('Error loading customers:', err);
+        }
+      } else {
+        console.warn('❌ No session found, redirecting to login');
+        window.location.href = "https://mmc.rundispatcher.com/?redirect=/customer";
+      }
 
-  // Pre-create both modals (hidden) so they're ready the first time
-  // someone clicks the Text button.
-  ensureTextModal();
+      // Pre-create modals after auth is confirmed
+      ensureTextModal();
 
-  document.getElementById("filter-all")?.addEventListener("click", () => setFilter("all"));
-  document.getElementById("filter-bronze")?.addEventListener("click", () => setFilter("bronze"));
-  document.getElementById("filter-gold")?.addEventListener("click", () => setFilter("gold"));
-  document.getElementById("filter-steel")?.addEventListener("click", () => setFilter("steel"));
+      document.getElementById("filter-all")?.addEventListener("click", () => setFilter("all"));
+      document.getElementById("filter-bronze")?.addEventListener("click", () => setFilter("bronze"));
+      document.getElementById("filter-gold")?.addEventListener("click", () => setFilter("gold"));
+      document.getElementById("filter-steel")?.addEventListener("click", () => setFilter("steel"));
+
+      // Unsubscribe after first check
+      subscription?.unsubscribe();
+    }
+  });
+
+  // Fallback timeout in case auth state never changes
+  setTimeout(() => {
+    if (!authStateReady) {
+      console.warn('⏱️ Auth state check timeout, forcing load attempt');
+      loadCustomers({ refreshCounts: true })
+        .catch(err => console.error('Error in fallback load:', err));
+    }
+  }, 1500);
 });
 
 document.addEventListener("DOMContentLoaded", () => {
