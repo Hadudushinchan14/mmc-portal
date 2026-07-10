@@ -169,32 +169,25 @@ async function loadCustomers({ refreshCounts = false } = {}) {
     await new Promise(resolve => setTimeout(resolve, 500));
     if (!client) {
       console.error('Failed to initialize database connection');
-      // Use absolute URL to prevent loop
-      window.location.href = "https://mmc.rundispatcher.com/?redirect=/customer";
+      redirectToLogin();
       return;
     }
   }
 
-  // Give localStorage time to be ready and allow session to restore
-  await new Promise(resolve => setTimeout(resolve, 200));
-
   try {
-    // Try to restore session from localStorage
-    const { data: { session }, error: sessionError } = await client.auth.getSession();
-    
-    console.log('Session check:', { session: !!session, sessionError });
-    console.log('LocalStorage auth key:', localStorage.getItem('sb-mkrnksthkovbolgvggvh-auth-token') ? 'exists' : 'missing');
-
+    // Get the current user - this should work because auth state listener has fired
     const { data: { user } } = await client.auth.getUser();
 
-    console.log('User check:', { user: user?.id || 'not found' });
+    console.log('👤 User check:', { userId: user?.id || 'NOT FOUND', email: user?.email });
 
     if (!user) {
-      console.warn('No user found, redirecting to login with redirect param');
-      // Use absolute URL and prevent redirect loop
-      window.location.href = "https://mmc.rundispatcher.com/?redirect=/customer";
+      console.warn('❌ No authenticated user found');
+      redirectToLogin();
       return;
     }
+
+    // User is authenticated - fetch their customers only
+    console.log('✅ Loading customers for partner:', user.id);
 
     if (refreshCounts) {
       await fetchCounts(user.id);
@@ -203,8 +196,14 @@ async function loadCustomers({ refreshCounts = false } = {}) {
     await fetchPage(user.id);
   } catch (err) {
     console.error('Error in loadCustomers:', err);
-    window.location.href = "https://mmc.rundispatcher.com/?redirect=/customer";
+    redirectToLogin();
   }
+}
+
+// Helper to redirect to login
+function redirectToLogin() {
+  console.log('🔐 Redirecting to login...');
+  window.location.href = "https://mmc.rundispatcher.com/?redirect=/customer";
 }
 
 // ---------- filters ----------
@@ -294,78 +293,55 @@ function buildMembershipUrl(customer) {
   return `https://portal.membership.rundispatcher.com/membership?member_id=${memberId}`;
 }
 
-// Replaces all supported placeholders in a template string.
-//
-// FIX: previously used `template.replaceAll("{{customer_name}}", ...)`,
-// which requires an exact literal match. If the template saved in
-// Supabase had any deviation from that exact string — a stray space
-// ("{{ customer_name }}"), different casing, or a non-breaking space
-// introduced by pasting into a form field — replaceAll() would silently
-// no-op and return the template unchanged, with no error thrown.
-// That's what produced the bug: placeholders staying literally as
-// "{{customer_name}}" in the modal even though the function "ran fine".
-//
-// Now uses a single regex pass that:
-//   - tolerates any amount of whitespace inside the braces
-//   - is case-insensitive on the key name
-//   - leaves any unrecognized {{...}} token untouched instead of
-//     silently dropping or mismatching it
+// Utility: replaces common placeholders in SMS templates.
 function fillSmsTemplate(template, customer, businessName, extraValues = {}) {
-  const values = {
-    customer_name: customer.full_name || "",
-    business_name: businessName || "",
-    membership_url: buildMembershipUrl(customer),
-    ...extraValues,
-  };
-
-  return template.replace(/\{\{\s*([a-zA-Z_]+)\s*\}\}/g, (match, key) => {
-    const normalizedKey = key.toLowerCase();
-    return Object.prototype.hasOwnProperty.call(values, normalizedKey)
-      ? values[normalizedKey]
-      : match; // leave unrecognized placeholders as-is
-  });
+  return template
+    .replace(/\{\{customer_name\}\}/g, customer.full_name || "Valued Customer")
+    .replace(/\{\{business_name\}\}/g, businessName || "Our Business")
+    .replace(/\{\{membership_url\}\}/g, buildMembershipUrl(customer))
+    .replace(/\{\{review_link\}\}/g, extraValues.review_link || "")
+    .trim();
 }
 
-// Opens the shared Send-message modal for a given customer + message type
-// ("membership" or "review"), loading that type's saved template (or its
-// default) and pre-filling it. This is the single workflow both
-// "Text Membership Card" and "Request Review" run through.
-async function openMessageModal(customerId, type) {
-  const customer = allCustomers.find((c) => String(c.id) === String(customerId));
-  if (!customer) return;
-
-  const config = MESSAGE_TYPES[type];
-  if (!config) return;
+// Unified modal opener — handles both membership SMS and review templates.
+async function openMessageModal(customerId, messageType) {
+  const config = MESSAGE_TYPES[messageType];
 
   const { data: { user } } = await client.auth.getUser();
   if (!user) {
-    window.location = "/portal-login";
+    redirectToLogin();
     return;
   }
 
-  const { data: profile, error } = await client
-    .from("profiles")
-    .select(selectFieldsFor(type))
-    .eq("user_id", user.id)
+  // Set active context so Edit/Send/Save know which flow they're in
+  activeMessageType = messageType;
+
+  // Fetch the customer record
+  const { data: customer, error: customerError } = await client
+    .from("customers")
+    .select("*")
+    .eq("id", customerId)
+    .eq("partner_id", user.id)
     .single();
 
-  if (error) {
-    console.error("Profile load error:", error);
-  }
-
-  // Google Review URL is a business-level setting (profiles.google_maps_link),
-  // never stored per-customer. If it hasn't been set yet, don't crash —
-  // let the business know where to add it and stop before opening the modal.
-  if (
-    config.requiresGoogleReviewUrl &&
-    (!profile?.google_maps_link || profile.google_maps_link.trim() === "")
-  ) {
-    alert("Google Review Link Required. Before sending a review request, please add your Google Review link in Account Settings.");
+  if (customerError || !customer) {
+    console.error("Error fetching customer:", customerError);
+    alert("Could not load customer details.");
     return;
   }
 
   activeTextCustomer = customer;
-  activeMessageType = type;
+
+  // Fetch profile for business_name + template
+  const { data: profile, error: profileError } = await client
+    .from("profiles")
+    .select(selectFieldsFor(messageType))
+    .eq("user_id", user.id)
+    .single();
+
+  if (profileError) {
+    console.error("Profile load error:", profileError);
+  }
 
   const businessName = profile?.business_name || "";
   const savedTemplate = profile?.[config.templateField];
@@ -373,23 +349,21 @@ async function openMessageModal(customerId, type) {
     ? savedTemplate
     : config.defaultTemplate;
 
-  const extraValues = config.requiresGoogleReviewUrl
-    ? { review_link: profile.google_maps_link }
-    : {};
+  // Check if this type requires a Google Review URL and it's not set
+  if (config.requiresGoogleReviewUrl && !profile?.google_maps_link) {
+    alert("Please add your Google Review URL in Account Settings before sending a review request.");
+    return;
+  }
 
-  // --- temporary debugging (safe to remove once confirmed fixed) ---
-  console.log("CUSTOMER", customer);
-  console.log("PROFILE", profile);
-  console.log("TEMPLATE", template);
+  const extraValues = config.requiresGoogleReviewUrl
+    ? { review_link: profile?.google_maps_link }
+    : {};
 
   const message = fillSmsTemplate(template, customer, businessName, extraValues);
 
-  console.log("MESSAGE", message);
-  // --- end temporary debugging ---
-
-  ensureTextModal();
+  // Populate and show the Send modal
   document.getElementById("textModalTitle").textContent = config.modalTitle;
-  document.getElementById("textModalCustomerName").textContent = customer.full_name || "";
+  document.getElementById("textModalCustomerName").textContent = `to ${customer.full_name}`;
   document.getElementById("textModalTextarea").value = message;
   document.getElementById("textModalOverlay").style.display = "flex";
 }
@@ -421,7 +395,7 @@ async function openTemplateEditor() {
 
   const { data: { user } } = await client.auth.getUser();
   if (!user) {
-    window.location = "/portal-login";
+    redirectToLogin();
     return;
   }
 
@@ -574,7 +548,7 @@ function ensureTextModal() {
 
 // ---------- init ----------
 window.addEventListener("load", async () => {
-  console.log('🚀 Customer page loaded, initializing...');
+  console.log('🚀 Page loaded, checking authentication...');
   
   // Wait for client to be initialized
   let clientRetries = 0;
@@ -584,59 +558,62 @@ window.addEventListener("load", async () => {
   }
 
   if (!client) {
-    console.error('❌ Failed to initialize Supabase client after 2 seconds');
+    console.error('❌ Failed to initialize Supabase client');
     alert('Failed to connect to database. Please refresh the page.');
     return;
   }
 
   console.log('✅ Supabase client ready');
 
-  // Use auth state listener to wait for session to be restored
-  let authStateReady = false;
+  // Use auth state listener to ensure session is restored before loading data
+  let authCheckComplete = false;
   
   const { data: { subscription } } = client.auth.onAuthStateChange(async (event, session) => {
-    console.log('🔐 Auth state changed:', { event, sessionExists: !!session });
+    console.log('🔐 Auth state event:', { event, hasSession: !!session });
     
-    if (!authStateReady) {
-      authStateReady = true;
+    if (!authCheckComplete) {
+      authCheckComplete = true;
       
       if (session) {
-        console.log('✅ Session restored from localStorage, loading customers...');
+        console.log('✅ User authenticated, loading customers...');
         try {
           await loadCustomers({ refreshCounts: true });
         } catch (err) {
           console.error('Error loading customers:', err);
         }
+
+        // Pre-create both modals (hidden)
+        ensureTextModal();
+
+        // Setup filter listeners
+        document.getElementById("filter-all")?.addEventListener("click", () => setFilter("all"));
+        document.getElementById("filter-bronze")?.addEventListener("click", () => setFilter("bronze"));
+        document.getElementById("filter-gold")?.addEventListener("click", () => setFilter("gold"));
+        document.getElementById("filter-steel")?.addEventListener("click", () => setFilter("steel"));
       } else {
-        console.warn('❌ No session found, redirecting to login');
-        window.location.href = "https://mmc.rundispatcher.com/?redirect=/customer";
+        console.warn('❌ No session found - user not authenticated');
+        redirectToLogin();
       }
 
-      // Pre-create modals after auth is confirmed
-      ensureTextModal();
-
-      document.getElementById("filter-all")?.addEventListener("click", () => setFilter("all"));
-      document.getElementById("filter-bronze")?.addEventListener("click", () => setFilter("bronze"));
-      document.getElementById("filter-gold")?.addEventListener("click", () => setFilter("gold"));
-      document.getElementById("filter-steel")?.addEventListener("click", () => setFilter("steel"));
-
-      // Unsubscribe after first check
+      // Unsubscribe from auth changes
       subscription?.unsubscribe();
     }
   });
 
-  // Fallback timeout in case auth state never changes
+  // Fallback timeout - if auth state never fires, still try to load
   setTimeout(() => {
-    if (!authStateReady) {
-      console.warn('⏱️ Auth state check timeout, forcing load attempt');
-      loadCustomers({ refreshCounts: true })
-        .catch(err => console.error('Error in fallback load:', err));
+    if (!authCheckComplete) {
+      console.warn('⏱️ Auth state timeout, attempting load...');
+      loadCustomers({ refreshCounts: true }).catch(err => {
+        console.error('Fallback load error:', err);
+        redirectToLogin();
+      });
     }
-  }, 1500);
+  }, 2000);
 });
 
 document.addEventListener("DOMContentLoaded", () => {
-  // pagination (stays within the current filter)
+  // Pagination
   document.getElementById("nextPage")?.addEventListener("click", () => {
     currentPage++;
     loadCustomers();
@@ -649,8 +626,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-   // search — operates on the currently loaded page only, per spec.
-  // Does not touch currentFilter, pagination, or the DB.
+  // Search — operates on the currently loaded page only
   const search = document.getElementById("searchInput");
 
   if (search) {
