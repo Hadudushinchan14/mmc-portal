@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Customers</title>
+
+<link rel="stylesheet" href="style.css">
+
+</head>
+
+<body>
+
+<div class="customers-page">
+
+    <div class="page-header">
+        <h1>Customers</h1>
+        <p>Manage your customers here.</p>
+    </div>
+
+    <div class="stats-grid">
+
+        <div class="stat-card stat-total" id="filter-all">
+            <h2 id="total_customers">0</h2>
+            <p>Total Members</p>
+        </div>
+
+        <div class="stat-card stat-bronze" id="filter-bronze">
+            <h2 id="active_customers">0</h2>
+            <p>Bronze Members</p>
+        </div>
+
+        <div class="stat-card stat-gold" id="filter-gold">
+            <h2 id="pending_customers">0</h2>
+            <p>Gold Members</p>
+        </div>
+
+        <div class="stat-card stat-steel" id="filter-steel">
+            <h2 id="steel_customers">0</h2>
+            <p>Steel Members</p>
+        </div>
+
+    </div>
+
+    <div class="customer-header">
+        <h2>Customer List</h2>
+        <button id="addCustomerBtn">+ Add Customer</button>
+    </div>
+
+    <input
+        id="searchInput"
+        placeholder="Search customers..."
+        style="width:100%;padding:12px 14px;border:1px solid #E5E7EB;border-radius:12px;margin-bottom:16px;"
+    >
+
+    <div id="customer_list">
+        Loading...
+    </div>
+
+    <div style="display:flex;gap:10px;margin-top:20px;">
+        <button id="prevPage" class="view-btn">← Prev</button>
+        <button id="nextPage" class="view-btn">Next →</button>
+    </div>
+
+</div>
+
+<script src="app.js"></script>
+
+</body>
+</html>
